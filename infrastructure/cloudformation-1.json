@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Terraform on AWS",
+    "Description": "Terraform on AWS: Provisioning VM only",
     "Parameters": {
         "Region": {
             "Type": "String",
@@ -46,7 +46,7 @@
                 "ImageId": "ami-f2d3638a",
                 "InstanceType": "t2.micro",
                 "KeyName": {
-                    "Ref": "AWS::AccountId"
+                    "Ref": "KeyName"
                 },
                 "SecurityGroupIds": [
                     {
