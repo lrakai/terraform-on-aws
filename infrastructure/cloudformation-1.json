@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Terraform on AWS: Provisioning VM only",
+    "Description": "Terraform on AWS: Development VM only",
     "Parameters": {
         "Region": {
             "Type": "String",
@@ -19,7 +19,7 @@
         },
         "Ec2InstanceConfig": {
             "Metadata": {
-                "InstanceName": "Provisioner"
+                "InstanceName": "Development"
             }
         },
         "UserConfig": {
@@ -335,8 +335,7 @@
                             "Statement": [
                                 {
                                     "Action": [
-                                        "ec2:Describe*",
-                                        "ec2:List*"
+                                        "ec2:Describe*"
                                     ],
                                     "Resource": "*",
                                     "Effect": "Allow",
