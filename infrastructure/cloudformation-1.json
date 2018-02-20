@@ -46,7 +46,7 @@
                 "ImageId": "ami-f2d3638a",
                 "InstanceType": "t2.micro",
                 "KeyName": {
-                    "Ref": "KeyName"
+                    "Ref": "AWS::AccountId"
                 },
                 "SecurityGroupIds": [
                     {
