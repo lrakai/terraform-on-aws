@@ -19,7 +19,7 @@
         },
         "Ec2InstanceConfig": {
             "Metadata": {
-                "InstanceName": "Development"
+                "InstanceName": "Development (Username: ec2-user)"
             }
         },
         "UserConfig": {
