@@ -67,7 +67,40 @@
                             ]
                         }
                     }
-                ]
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -xe\n",
+                                "cd /tmp\n",
+                                "wget https://releases.hashicorp.com/terraform/0.11.3/terraform_0.11.3_linux_amd64.zip\n",
+                                "unzip terraform_0.11.3_linux_amd64.zip -d /usr/local/bin/\n",
+                                "mkdir /home/ec2-user/infra && cd /home/ec2-user/infra\n",
+                                "cat > main.tf <<EOF\n",
+                                "provider \"aws\" {\n",
+                                "  version = \"< 2\"\n",
+                                "\n",  
+                                "  region  = \"us-west-2\" # Oregon\n",
+                                "}\n",
+                                "\n",
+                                "resource \"aws_vpc\" \"web_vpc\" {\n",
+                                "  cidr_block           = \"192.168.100.0/24\"\n",
+                                "  enable_dns_hostnames = true\n",
+                                "\n",
+                                "  tags {\n",
+                                "    Name = \"Web VPC\"\n",
+                                "  }\n",
+                                "}\n",
+                                "\n",
+                                "EOF\n",
+                                "terraform init\n",
+                                "chown -R ec2-user:ec2-user /home/ec2-user\n"
+                            ]
+                        ]
+                    }
+                }
             }
         },
         "Ec2Role": {
