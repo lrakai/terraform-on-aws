@@ -125,7 +125,7 @@
                 "Path": "/",
                 "Policies": [
                     {
-                        "PolicyName": "Terraform examples",
+                        "PolicyName": "Terraform-examples",
                         "PolicyDocument": {
                             "Version": "2012-10-17",
                             "Statement": [
