@@ -1,0 +1,494 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Terraform on AWS: Development VM + Web VPC",
+    "Parameters": {
+        "Region": {
+            "Type": "String",
+            "Default": "us-west-2"
+        }
+    },
+    "Mappings": {
+        "SubnetConfig": {
+            "VPC": {
+                "CIDR": "10.0.0.0/20"
+            },
+            "SubnetA": {
+                "CIDR": "10.0.0.0/24",
+                "AZ": "us-west-2a"
+            }
+        },
+        "Ec2InstanceConfig": {
+            "Metadata": {
+                "InstanceName": "Development (Username: ec2-user)"
+            }
+        },
+        "UserConfig": {
+            "Login": {
+                "Name": "student",
+                "Pass": "password"
+            }
+        }
+    },
+    "Resources": {
+        "Ec2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::FindInMap": [
+                        "SubnetConfig",
+                        "SubnetA",
+                        "AZ"
+                    ]
+                },
+                "IamInstanceProfile": {
+                    "Ref": "Ec2InstanceProfile"
+                },
+                "ImageId": "ami-f2d3638a",
+                "InstanceType": "t2.micro",
+                "KeyName": {
+                    "Ref": "AWS::AccountId"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "Ec2SecurityGroup"
+                    }
+                ],
+                "SubnetId": {
+                    "Ref": "SubnetA"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::FindInMap": [
+                                "Ec2InstanceConfig",
+                                "Metadata",
+                                "InstanceName"
+                            ]
+                        }
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -xe\n",
+                                "cd /tmp\n",
+                                "wget https://releases.hashicorp.com/terraform/0.11.3/terraform_0.11.3_linux_amd64.zip\n",
+                                "unzip terraform_0.11.3_linux_amd64.zip -d /usr/local/bin/\n",
+                                "mkdir /home/ec2-user/infra && cd /home/ec2-user/infra\n",
+                                "cat > main.tf <<EOF\n",
+                                "provider \"aws\" {\n",
+                                "  version = \"< 2\"\n",
+                                "\n",  
+                                "  region  = \"us-west-2\" # Oregon\n",
+                                "}\n",
+                                "\n",
+                                "resource \"aws_vpc\" \"web_vpc\" {\n",
+                                "  cidr_block           = \"192.168.100.0/24\"\n",
+                                "  enable_dns_hostnames = true\n",
+                                "\n",
+                                "  tags {\n",
+                                "    Name = \"Web VPC\"\n",
+                                "  }\n",
+                                "}\n",
+                                "\n",
+                                "resource \"aws_subnet\" \"web_subnet\" {\n",
+                                "  # Use the count meta-parameter to create multiple copies\n",
+                                "  count             = 2\n",
+                                "  vpc_id            = \"${aws_vpc.web_vpc.id}\"\n",
+                                "  # cidrsubnet function splits a cidr block into subnets\n",
+                                "  cidr_block        = \"${cidrsubnet(var.network_cidr, 1, count.index)}\"\n",
+                                "  # element retrieves a list element at a given index\n",
+                                "  availability_zone = \"${element(var.availability_zones, count.index)}\"\n",
+                                "\n",
+                                "  tags {\n",
+                                "    Name = \"Web Subnet ${count.index + 1}\"\n",
+                                "  }\n",
+                                "}\n",
+                                "\n",                                
+                                "resource \"aws_instance\" \"web\" {\n",
+                                "  count         = \"${var.instance_count}\"\n",
+                                "  # lookup returns a map value for a given key\n",
+                                "  ami           = \"${lookup(var.ami_ids, \"us-west-2\")}\"\n",
+                                "  instance_type = \"t2.micro\"\n",
+                                "  subnet_id     = \"${element(aws_subnet.web_subnet.*.id, count.index % length(aws_subnet.web_subnet.*.id))}\"\n",
+                                "\n",
+                                "  tags {\n",
+                                "    Name = \"Web Server ${count.index + 1}\"\n",
+                                "  }\n",
+                                "}\n",
+                                "EOF\n","cat > variables.tf <<EOF\n",
+                                "# Example of a string variable\n",
+                                "variable network_cidr {\n",
+                                "  default = \"192.168.100.0/24\"\n",
+                                "}\n",
+                                "\n",
+                                "# Example of a list variable\n",
+                                "variable availability_zones {\n",
+                                "  default = [\"us-west-2a\", \"us-west-2b\"]\n",
+                                "}\n",
+                                "\n",
+                                "# Example of an integer variable\n",
+                                "variable instance_count {\n",
+                                "  default = 2\n",
+                                "}\n",
+                                "\n",
+                                "# Example of a map variable\n",
+                                "variable ami_ids {\n",
+                                "default = {\n",
+                                "    \"us-west-2\" = \"ami-f2d3638a\"\n",
+                                "    \"us-east-1\" = \"ami-97785bed\"\n",
+                                "  }\n",
+                                "}\n",
+                                "\n",
+                                "EOF\n",
+                                "EOF\n",
+                                "cat > outputs.tf <<EOF\n",
+                                "output \"ips\" {\n",
+                                "  # join all the instance private IPs with commas separating them\n",
+                                "  value = \"${join(\", \", aws_instance.web.*.private_ip)}\"\n",
+                                "}\n",
+                                "EOF\n",
+                                "/usr/local/bin/terraform init\n",
+                                "/usr/local/bin/terraform apply --auto-approve\n",
+                                "chown -R ec2-user:ec2-user /home/ec2-user\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "Ec2Role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "Terraform-examples",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "ec2:Describe*",
+                                        "ec2:RebootInstances",
+                                        "ec2:AuthorizeSecurityGroupEgress",
+                                        "ec2:AuthorizeSecurityGroupIngress",
+                                        "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+                                        "ec2:DeleteTags",
+                                        "ec2:CreateTags",
+                                        "ec2:CreateVpc",
+                                        "ec2:CreateSubnet",
+                                        "ec2:DeleteSubnet",
+                                        "ec2:StopInstances",
+                                        "ec2:TerminateInstances",
+                                        "ec2:UpdateSecurityGroupRuleDescriptionsIngress",
+                                        "ec2:RevokeSecurityGroupIngress",
+                                        "ec2:StartInstances",
+                                        "ec2:CreateSecurityGroup",
+                                        "ec2:RevokeSecurityGroupEgress",
+                                        "ec2:DeleteSecurityGroup",
+                                        "ec2:DeleteVpc",
+                                        "ec2:ModifyVpcAttribute"
+                                    ],
+                                    "Resource": "*",
+                                    "Effect": "Allow",
+                                    "Condition": {
+                                        "StringEquals": {
+                                            "ec2:Region": "us-west-2"
+                                        }
+                                    }
+                                },
+                                {
+                                    "Action": [
+                                        "ec2:RunInstances"
+                                    ],
+                                    "Resource": [
+                                        "arn:aws:ec2:us-west-2:*:instance/*"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Condition": {
+                                        "StringEquals": {
+                                            "ec2:InstanceType": [
+                                                "t2.micro"
+                                            ]
+                                        }
+                                    }
+                                },
+                                {
+                                    "Action": [
+                                        "ec2:RunInstances"
+                                    ],
+                                    "Resource": [
+                                        "arn:aws:ec2:us-west-2::image/*",
+                                        "arn:aws:ec2:us-west-2::snapshot/*",
+                                        "arn:aws:ec2:us-west-2:*:key-pair/*",
+                                        "arn:aws:ec2:us-west-2:*:security-group/*",
+                                        "arn:aws:ec2:us-west-2:*:subnet/*",
+                                        "arn:aws:ec2:us-west-2:*:network-interface/*",
+                                        "arn:aws:ec2:us-west-2:*:volume/*",
+                                        "arn:aws:ec2:us-west-2:*:placement-group/*",
+                                        "arn:aws:ec2:us-west-2:*:vpc/*"
+                                    ],
+                                    "Effect": "Allow"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "elasticloadbalancing:Describe*"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "elasticloadbalancing:DeleteLoadBalancer",
+                                        "elasticloadbalancing:RemoveTags",
+                                        "elasticloadbalancing:AttachLoadBalancerToSubnets",
+                                        "elasticloadbalancing:CreateLoadBalancer",
+                                        "elasticloadbalancing:ConfigureHealthCheck",
+                                        "elasticloadbalancing:AddTags",
+                                        "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
+                                        "elasticloadbalancing:DeleteLoadBalancerListeners",
+                                        "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                                        "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                                        "elasticloadbalancing:CreateLoadBalancerListeners"
+                                    ],
+                                    "Resource": "arn:aws:elasticloadbalancing:*:*:loadbalancer/*"
+                                },
+                                {
+                                    "Action": [
+                                        "ec2:ModifyInstanceAttribute",
+                                        "ec2:*Reserved*",
+                                        "dynamodb:*Reserved*",
+                                        "rds:*Reserved*",
+                                        "elasticache:*Reserved*",
+                                        "redshift:*Reserved*",
+                                        "aws-marketplace:*"
+                                    ],
+                                    "Resource": "*",
+                                    "Effect": "Deny"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "Ec2InstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "Ec2Role"
+                    }
+                ]
+            }
+        },
+        "VPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": {
+                    "Fn::FindInMap": [
+                        "SubnetConfig",
+                        "VPC",
+                        "CIDR"
+                    ]
+                },
+                "EnableDnsSupport": true,
+                "EnableDnsHostnames": true,
+                "Tags": [
+                    {
+                        "Key": "Lab",
+                        "Value": {
+                            "Ref": "AWS::StackName"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "Lab VPC"
+                    }
+                ]
+            }
+        },
+        "SubnetA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "MapPublicIpOnLaunch": true,
+                "AvailabilityZone": {
+                    "Fn::FindInMap": [
+                        "SubnetConfig",
+                        "SubnetA",
+                        "AZ"
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::FindInMap": [
+                        "SubnetConfig",
+                        "SubnetA",
+                        "CIDR"
+                    ]
+                }
+            }
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "InternetGatewayAttach": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "PublicRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "PublicRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "SubnetARouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetA"
+                },
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }
+            }
+        },
+        "Ec2SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "ssh only",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "Group": {
+            "Type": "AWS::IAM::Group",
+            "Properties": {
+                "GroupName": "Students",
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "students-policy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "ec2:Describe*"
+                                    ],
+                                    "Resource": "*",
+                                    "Effect": "Allow",
+                                    "Condition": {
+                                        "StringEquals": {
+                                            "ec2:Region": "us-west-2"
+                                        }
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "elasticloadbalancing:Describe*"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Deny",
+                                    "Action": [
+                                        "ec2:ModifyInstanceAttribute",
+                                        "ec2:*Reserved*",
+                                        "ec2:*Spot*",
+                                        "dynamodb:*Reserved*",
+                                        "rds:*Reserved*",
+                                        "elasticache:*Reserved*",
+                                        "redshift:*Reserved*",
+                                        "aws-marketplace:*"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "User": {
+            "Type": "AWS::IAM::User",
+            "Properties": {
+                "LoginProfile": {
+                    "Password": {
+                        "Fn::FindInMap": [
+                            "UserConfig",
+                            "Login",
+                            "Pass"
+                        ]
+                    }
+                },
+                "Path": "/",
+                "Groups": [
+                    "Students"
+                ],
+                "UserName": {
+                    "Fn::FindInMap": [
+                        "UserConfig",
+                        "Login",
+                        "Name"
+                    ]
+                }
+            }
+        }
+    }
+}
