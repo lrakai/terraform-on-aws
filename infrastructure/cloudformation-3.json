@@ -139,7 +139,7 @@
                                 "# Example of a map variable\n",
                                 "variable ami_ids {\n",
                                 "default = {\n",
-                                "    \"us-west-2\" = \"ami-f2d3638a\"\n",
+                                "    \"us-west-2\" = \"ami-0dcd4f6d\"\n",
                                 "    \"us-east-1\" = \"ami-97785bed\"\n",
                                 "  }\n",
                                 "}\n",
