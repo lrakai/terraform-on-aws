@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Terraform on AWS: Development VM + Web VPC",
+    "Description": "Terraform on AWS: Development VM + Terraform create phase 2 resources",
     "Parameters": {
         "Region": {
             "Type": "String",
@@ -78,7 +78,7 @@
                                 "wget https://releases.hashicorp.com/terraform/0.11.3/terraform_0.11.3_linux_amd64.zip\n",
                                 "unzip terraform_0.11.3_linux_amd64.zip -d /usr/local/bin/\n",
                                 "mkdir /home/ec2-user/infra && cd /home/ec2-user/infra\n",
-                                "cat > main.tf <<EOF\n",
+                                "cat > main.tf <<'EOF'\n",
                                 "provider \"aws\" {\n",
                                 "  version = \"< 2\"\n",
                                 "\n",  
@@ -119,7 +119,8 @@
                                 "    Name = \"Web Server ${count.index + 1}\"\n",
                                 "  }\n",
                                 "}\n",
-                                "EOF\n","cat > variables.tf <<EOF\n",
+                                "EOF\n",
+                                "cat > variables.tf <<'EOF'\n",
                                 "# Example of a string variable\n",
                                 "variable network_cidr {\n",
                                 "  default = \"192.168.100.0/24\"\n",
@@ -144,8 +145,7 @@
                                 "}\n",
                                 "\n",
                                 "EOF\n",
-                                "EOF\n",
-                                "cat > outputs.tf <<EOF\n",
+                                "cat > outputs.tf <<'EOF'\n",
                                 "output \"ips\" {\n",
                                 "  # join all the instance private IPs with commas separating them\n",
                                 "  value = \"${join(\", \", aws_instance.web.*.private_ip)}\"\n",
