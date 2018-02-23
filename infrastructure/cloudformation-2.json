@@ -224,6 +224,7 @@
                                         "elasticloadbalancing:DeleteLoadBalancerListeners",
                                         "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
                                         "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                                        "elasticloadbalancing:ModifyLoadBalancerAttributes",
                                         "elasticloadbalancing:CreateLoadBalancerListeners"
                                     ],
                                     "Resource": "arn:aws:elasticloadbalancing:*:*:loadbalancer/*"
