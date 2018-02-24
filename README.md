@@ -1,4 +1,5 @@
 # terraform-on-aws
+
 Demonstrate how to manage AWS resources with Terraform
 
 ## Environment Diagrams
@@ -18,3 +19,32 @@ Demonstrate how to manage AWS resources with Terraform
 ### Final Environment
 
 ![Final Environment](https://user-images.githubusercontent.com/3911650/36611759-b6b4b15e-1891-11e8-8408-1c28bef6e67d.png)
+
+## Getting Started
+
+Deploy the CloudFormation `infrastructure/cloudformation-1.json` template. The template creates a user with the following credentials and minimal required permisisons to complete the Lab:
+
+- Username: _student_
+- Password: _password_
+
+You can also deploy a CloudFormation stack to jump ahead to part 2 or part 3 using `infrastructure/cloudformation-2.json` or `infrastructure/cloudformation-3.json`, repsectively.
+
+## Instructions
+
+- SSH into the Development instance
+- Install Terraform 0.11.3:
+    - wget https://releases.hashicorp.com/terraform/0.11.3/terraform_0.11.3_linux_amd64.zip
+    - sudo unzip terraform_0.11.3_linux_amd64.zip -d /usr/local/bin/
+- Copy the files in `src/part1` to a project directory
+- Initialize the directory with `terraform init`
+- Create the resources with `terraform apply`
+- Copy the files in `src/part2` to the project directory
+- Initialize the directory with `terraform init`
+- Create the resources with `terraform apply`
+- Copy the files in `src/part3` to the project directory
+- Initialize the directory with `terraform init`
+- Create the resources with `terraform apply`
+
+## Cleaning Up
+
+Destroy the resources managed by Terraform with `terraform destroy`. Delete the CloudFormation stack to remove all the remaining template resources.
