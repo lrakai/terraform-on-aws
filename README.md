@@ -1,6 +1,6 @@
 # terraform-on-aws
 
-Demonstrate how to manage AWS resources with Terraform
+Demonstrate how to manage AWS resources with Terraform. Piece-by-piece you will build up a two-tier architecture with web servers in private subnets in different availability zones and an Elastic Load Balancer in public subnets.
 
 ## Environment Diagrams
 
